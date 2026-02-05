@@ -74,6 +74,23 @@ def _create_ticket(email_from: str, subject: str, body: str) -> int:
     return int(ticket_id)
 
 
+@app.before_request
+def enforce_login() -> Any:
+    if request.endpoint in {
+        "login_home",
+        "login_admin",
+        "login_dispatcher",
+        "login_technician",
+        "intake_email",
+        "static",
+    }:
+        return None
+    user = _get_user_context()
+    if user["role"] == "guest":
+        return redirect(url_for("login_home"))
+    return None
+
+
 @app.route("/")
 def index() -> str:
     user = _get_user_context()
@@ -92,21 +109,47 @@ def index() -> str:
     )
 
 
-@app.route("/login", methods=["GET", "POST"])
-def login() -> Any:
+@app.route("/login")
+def login_home() -> str:
+    return render_template("login_home.html", user=_get_user_context())
+
+
+@app.route("/login/admin", methods=["GET", "POST"])
+def login_admin() -> Any:
     if request.method == "POST":
-        role = request.form.get("role") or "admin"
+        session["role"] = "admin"
+        session["technician_email"] = ""
+        return redirect(url_for("index"))
+    return render_template("login_admin.html", user=_get_user_context())
+
+
+@app.route("/login/dispatcher", methods=["GET", "POST"])
+def login_dispatcher() -> Any:
+    if request.method == "POST":
+        session["role"] = "dispatcher"
+        session["technician_email"] = ""
+        return redirect(url_for("index"))
+    return render_template("login_dispatcher.html", user=_get_user_context())
+
+
+@app.route("/login/technician", methods=["GET", "POST"])
+def login_technician() -> Any:
+    if request.method == "POST":
         technician_email = request.form.get("technician_email", "")
-        session["role"] = role
+        session["role"] = "technician"
         session["technician_email"] = technician_email
         return redirect(url_for("index"))
-    return render_template("login.html", technicians=TECHNICIANS, user=_get_user_context())
+    return render_template(
+        "login_technician.html",
+        technicians=TECHNICIANS,
+        user=_get_user_context(),
+    )
 
 
 @app.route("/logout", methods=["POST"])
 def logout() -> Any:
     session.clear()
-    return redirect(url_for("index"))
+    return redirect(url_for("login_home"))
 
 
 @app.route("/tickets", methods=["POST"])
@@ -129,7 +172,14 @@ def ticket_detail(ticket_id: int) -> str:
             (ticket_id,),
         ).fetchall()
     if not ticket:
-        return render_template("ticket_not_found.html", ticket_id=ticket_id), 404
+        return (
+            render_template(
+                "ticket_not_found.html",
+                ticket_id=ticket_id,
+                user=_get_user_context(),
+            ),
+            404,
+        )
     return render_template(
         "ticket_detail.html",
         ticket=ticket,
@@ -194,6 +244,9 @@ def intake_email() -> Any:
 
 @app.route("/dashboard")
 def dashboard() -> str:
+    user = _get_user_context()
+    if user["role"] == "technician":
+        return redirect(url_for("index"))
     with _get_connection() as connection:
         tickets = connection.execute(
             "SELECT * FROM tickets ORDER BY created_at DESC"
@@ -204,7 +257,7 @@ def dashboard() -> str:
         "dashboard.html",
         tickets=ticket_views,
         metrics=metrics,
-        user=_get_user_context(),
+        user=user,
     )
 
 

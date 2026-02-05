@@ -12,11 +12,16 @@
         <h1>Soporte Técnico</h1>
         <p>Canal oficial: atencion@miempresa.com</p>
       </div>
+      {% if user.role != 'guest' %}
       <nav>
         <a href="{{ url_for('index') }}">Tickets</a>
         <a href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a href="{{ url_for('login') }}">Acceso</a>
+        <span class="nav-role">Perfil: {{ user.role }}</span>
+        <form method="post" action="{{ url_for('logout') }}">
+          <button type="submit" class="link-button">Cerrar sesión</button>
+        </form>
       </nav>
+      {% endif %}
     </header>
     <main>
       {% block content %}{% endblock %}

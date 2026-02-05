@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Inicio de sesión</h2>
+  <p>Selecciona el módulo según tu rol para ingresar al sistema.</p>
+  <div class="login-grid">
+    <a class="login-card" href="{{ url_for('login_admin') }}">Administrador</a>
+    <a class="login-card" href="{{ url_for('login_dispatcher') }}">Derivador</a>
+    <a class="login-card" href="{{ url_for('login_technician') }}">Técnico</a>
+  </div>
+</section>
+{% endblock %}

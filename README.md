@@ -10,6 +10,11 @@ Este proyecto implementa un flujo básico de soporte técnico para recibir incid
 - Dashboard con tiempos promedio y estado de cada incidencia.
 - Módulos por perfil: administrador, derivador y técnico.
 
+Roles y funciones:
+- Administrador: visualiza todo el tablero y puede cerrar tickets.
+- Derivador: asigna manualmente los tickets a cada técnico.
+- Técnico: ve solo sus tickets asignados y puede cerrar los propios.
+
 ## Ejecución local
 
 ```bash
@@ -20,6 +25,14 @@ python app.py
 ```
 
 Accede a:
+- `http://localhost:5000/login` como puerta de entrada obligatoria.
+- `http://localhost:5000/` para crear y ver tickets (requiere sesión activa).
+- `http://localhost:5000/dashboard` para el reporte (requiere sesión activa).
+
+Rutas de acceso por rol:
+- `http://localhost:5000/login/admin`
+- `http://localhost:5000/login/dispatcher`
+- `http://localhost:5000/login/technician`
 - `http://localhost:5000/` para crear y ver tickets.
 - `http://localhost:5000/dashboard` para el reporte.
 - `http://localhost:5000/login` para seleccionar el perfil de trabajo.

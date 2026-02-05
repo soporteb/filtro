@@ -30,6 +30,25 @@ nav a {
   font-weight: 600;
 }
 
+nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-role {
+  color: #cbd5f5;
+  font-weight: 600;
+}
+
+.link-button {
+  background: transparent;
+  color: #fff;
+  padding: 0;
+  font-weight: 600;
+  border: none;
+}
+
 main {
   padding: 2rem 2.5rem 3rem;
   display: flex;
@@ -42,6 +61,26 @@ main {
   padding: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.login-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.login-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #dbe3f0;
+  text-decoration: none;
+  font-weight: 700;
+  color: #1e3a8a;
+  background: #eef2ff;
 }
 
 .grid {
