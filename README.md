@@ -33,6 +33,9 @@ Rutas de acceso por rol:
 - `http://localhost:5000/login/admin`
 - `http://localhost:5000/login/dispatcher`
 - `http://localhost:5000/login/technician`
+- `http://localhost:5000/` para crear y ver tickets.
+- `http://localhost:5000/dashboard` para el reporte.
+- `http://localhost:5000/login` para seleccionar el perfil de trabajo.
 
 ## Ingreso de correos (API)
 
