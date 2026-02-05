@@ -6,8 +6,8 @@ import sqlite3
 import hashlib
 import csv
 import io
-from zoneinfo import ZoneInfo
-from datetime import datetime, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from datetime import datetime, timezone, timedelta
 from typing import Any
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
@@ -32,7 +32,10 @@ def _get_connection() -> sqlite3.Connection:
     return connection
 
 
-LIMA_TZ = ZoneInfo("America/Lima")
+try:
+    LIMA_TZ = ZoneInfo("America/Lima")
+except ZoneInfoNotFoundError:
+    LIMA_TZ = timezone(timedelta(hours=-5))
 
 
 def _now_lima() -> str:

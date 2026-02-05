@@ -32,6 +32,8 @@ pip install -r requirements.txt
 python app.py
 ```
 
+Nota: En Windows se instala `tzdata` para resolver la zona horaria de Lima.
+
 Accede a:
 - `http://localhost:5000/login` como puerta de entrada obligatoria.
 - `http://localhost:5000/` para crear y ver tickets (requiere sesión activa).
