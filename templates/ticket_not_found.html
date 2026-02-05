@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Ticket no encontrado</h2>
+  <p>No existe un ticket con ID {{ ticket_id }}.</p>
+  <a class="link" href="{{ url_for('index') }}">Volver</a>
+</section>
+{% endblock %}

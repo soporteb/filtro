@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Acceso derivador</h2>
+  <p>Ingresa para asignar manualmente los tickets a cada técnico.</p>
+  <form method="post" action="{{ url_for('login_dispatcher') }}" class="grid">
+    <label>
+      Usuario
+      <input type="text" name="identifier" required placeholder="derivador@miempresa.com" />
+    </label>
+    <label>
+      Contraseña
+      <input type="password" name="password" required />
+    </label>
+    <button type="submit">Ingresar como derivador</button>
+  </form>
+  {% if error %}
+  <p class="error">{{ error }}</p>
+  {% endif %}
+</section>
+{% endblock %}

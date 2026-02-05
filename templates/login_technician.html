@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Acceso técnico</h2>
+  <p>Selecciona tu correo para ver los tickets asignados.</p>
+  <form method="post" action="{{ url_for('login_technician') }}" class="grid">
+    <label>
+      Técnico
+      <select name="technician_email" required>
+        <option value="" disabled selected>Seleccionar</option>
+        {% for tech in technicians %}
+        <option value="{{ tech['email'] }}">{{ tech['name'] }} - {{ tech['specialty'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Contraseña
+      <input type="password" name="password" required />
+    </label>
+    <button type="submit">Ingresar como técnico</button>
+  </form>
+  {% if error %}
+  <p class="error">{{ error }}</p>
+  {% endif %}
+</section>
+{% endblock %}
