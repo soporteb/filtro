@@ -10,11 +10,18 @@
       <select name="technician_email" required>
         <option value="" disabled selected>Seleccionar</option>
         {% for tech in technicians %}
-        <option value="{{ tech.email }}">{{ tech.name }} - {{ tech.specialty }}</option>
+        <option value="{{ tech['email'] }}">{{ tech['name'] }} - {{ tech['specialty'] }}</option>
         {% endfor %}
       </select>
     </label>
+    <label>
+      Contraseña
+      <input type="password" name="password" required />
+    </label>
     <button type="submit">Ingresar como técnico</button>
   </form>
+  {% if error %}
+  <p class="error">{{ error }}</p>
+  {% endif %}
 </section>
 {% endblock %}

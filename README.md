@@ -15,6 +15,11 @@ Roles y funciones:
 - Derivador: asigna manualmente los tickets a cada técnico.
 - Técnico: ve solo sus tickets asignados y puede cerrar los propios.
 
+Funciones adicionales:
+- Administrador: gestiona técnicos (crear, editar, deshabilitar) desde la sección "Técnicos".
+- Administrador: crea credenciales para derivadores y técnicos desde la sección "Credenciales".
+- Técnico: agrega comentarios de atención, puede cerrar o devolver/reasignar incidencias.
+
 ## Ejecución local
 
 ```bash
@@ -33,9 +38,11 @@ Rutas de acceso por rol:
 - `http://localhost:5000/login/admin`
 - `http://localhost:5000/login/dispatcher`
 - `http://localhost:5000/login/technician`
-- `http://localhost:5000/` para crear y ver tickets.
-- `http://localhost:5000/dashboard` para el reporte.
-- `http://localhost:5000/login` para seleccionar el perfil de trabajo.
+- `http://localhost:5000/admin/technicians` (solo administrador)
+- `http://localhost:5000/admin/credentials` (solo administrador)
+
+Credenciales iniciales:
+- Administrador: `admin@miempresa.com` / `admin123` (cambiar una vez instalado).
 
 ## Ingreso de correos (API)
 

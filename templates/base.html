@@ -16,6 +16,10 @@
       <nav>
         <a href="{{ url_for('index') }}">Tickets</a>
         <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        {% if user.role == 'admin' %}
+        <a href="{{ url_for('admin_technicians') }}">Técnicos</a>
+        <a href="{{ url_for('admin_credentials') }}">Credenciales</a>
+        {% endif %}
         <span class="nav-role">Perfil: {{ user.role }}</span>
         <form method="post" action="{{ url_for('logout') }}">
           <button type="submit" class="link-button">Cerrar sesión</button>

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import os
+import secrets
 import sqlite3
+import hashlib
 from datetime import datetime, timezone
 from typing import Any
 
@@ -14,7 +16,7 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "dev-secret-key"
 
 
-TECHNICIANS = [
+DEFAULT_TECHNICIANS = [
     {"name": "Laura Gomez", "email": "laura.gomez@miempresa.com", "specialty": "Redes"},
     {"name": "Carlos Perez", "email": "carlos.perez@miempresa.com", "specialty": "Software"},
     {"name": "Ana Rojas", "email": "ana.rojas@miempresa.com", "specialty": "Hardware"},
@@ -35,6 +37,20 @@ def init_db() -> None:
     with _get_connection() as connection:
         connection.executescript(
             """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                role TEXT NOT NULL,
+                identifier TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                salt TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS technicians (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL UNIQUE,
+                specialty TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1
+            );
             CREATE TABLE IF NOT EXISTS tickets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email_from TEXT NOT NULL,
@@ -54,6 +70,40 @@ def init_db() -> None:
             );
             """
         )
+        existing = connection.execute("SELECT COUNT(*) FROM technicians").fetchone()[0]
+        if existing == 0:
+            connection.executemany(
+                """
+                INSERT INTO technicians (name, email, specialty, is_active)
+                VALUES (?, ?, ?, 1)
+                """,
+                [
+                    (tech["name"], tech["email"], tech["specialty"])
+                    for tech in DEFAULT_TECHNICIANS
+                ],
+            )
+        users_existing = connection.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        if users_existing == 0:
+            admin_identifier = "admin@miempresa.com"
+            salt = secrets.token_hex(8)
+            password_hash = _hash_password("admin123", salt)
+            connection.execute(
+                """
+                INSERT INTO users (role, identifier, password_hash, salt)
+                VALUES (?, ?, ?, ?)
+                """,
+                ("admin", admin_identifier, password_hash, salt),
+            )
+
+
+def _get_technicians(active_only: bool = False) -> list[sqlite3.Row]:
+    query = "SELECT * FROM technicians"
+    params: tuple[Any, ...] = ()
+    if active_only:
+        query += " WHERE is_active = 1"
+    query += " ORDER BY name"
+    with _get_connection() as connection:
+        return connection.execute(query, params).fetchall()
 
 
 def _create_ticket(email_from: str, subject: str, body: str) -> int:
@@ -94,6 +144,7 @@ def enforce_login() -> Any:
 @app.route("/")
 def index() -> str:
     user = _get_user_context()
+    technicians = _get_technicians(active_only=True)
     with _get_connection() as connection:
         if user["role"] == "technician" and user["technician_email"]:
             tickets = connection.execute(
@@ -105,7 +156,7 @@ def index() -> str:
                 "SELECT * FROM tickets ORDER BY created_at DESC"
             ).fetchall()
     return render_template(
-        "index.html", tickets=tickets, technicians=TECHNICIANS, user=user
+        "index.html", tickets=tickets, technicians=technicians, user=user
     )
 
 
@@ -117,18 +168,36 @@ def login_home() -> str:
 @app.route("/login/admin", methods=["GET", "POST"])
 def login_admin() -> Any:
     if request.method == "POST":
-        session["role"] = "admin"
-        session["technician_email"] = ""
-        return redirect(url_for("index"))
+        identifier = request.form.get("identifier", "").strip()
+        password = request.form.get("password", "")
+        if _authenticate_user("admin", identifier, password):
+            session["role"] = "admin"
+            session["technician_email"] = ""
+            session["user_identifier"] = identifier
+            return redirect(url_for("index"))
+        return render_template(
+            "login_admin.html",
+            user=_get_user_context(),
+            error="Credenciales inválidas.",
+        )
     return render_template("login_admin.html", user=_get_user_context())
 
 
 @app.route("/login/dispatcher", methods=["GET", "POST"])
 def login_dispatcher() -> Any:
     if request.method == "POST":
-        session["role"] = "dispatcher"
-        session["technician_email"] = ""
-        return redirect(url_for("index"))
+        identifier = request.form.get("identifier", "").strip()
+        password = request.form.get("password", "")
+        if _authenticate_user("dispatcher", identifier, password):
+            session["role"] = "dispatcher"
+            session["technician_email"] = ""
+            session["user_identifier"] = identifier
+            return redirect(url_for("index"))
+        return render_template(
+            "login_dispatcher.html",
+            user=_get_user_context(),
+            error="Credenciales inválidas.",
+        )
     return render_template("login_dispatcher.html", user=_get_user_context())
 
 
@@ -136,12 +205,21 @@ def login_dispatcher() -> Any:
 def login_technician() -> Any:
     if request.method == "POST":
         technician_email = request.form.get("technician_email", "")
-        session["role"] = "technician"
-        session["technician_email"] = technician_email
-        return redirect(url_for("index"))
+        password = request.form.get("password", "")
+        if _authenticate_user("technician", technician_email, password):
+            session["role"] = "technician"
+            session["technician_email"] = technician_email
+            session["user_identifier"] = technician_email
+            return redirect(url_for("index"))
+        return render_template(
+            "login_technician.html",
+            technicians=_get_technicians(active_only=True),
+            user=_get_user_context(),
+            error="Credenciales inválidas.",
+        )
     return render_template(
         "login_technician.html",
-        technicians=TECHNICIANS,
+        technicians=_get_technicians(active_only=True),
         user=_get_user_context(),
     )
 
@@ -180,11 +258,12 @@ def ticket_detail(ticket_id: int) -> str:
             ),
             404,
         )
+    technicians = _get_technicians(active_only=True)
     return render_template(
         "ticket_detail.html",
         ticket=ticket,
         timeline=timeline,
-        technicians=TECHNICIANS,
+        technicians=technicians,
         user=_get_user_context(),
     )
 
@@ -207,15 +286,156 @@ def close_ticket(ticket_id: int) -> Any:
     return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
 
+@app.route("/tickets/<int:ticket_id>/comment", methods=["POST"])
+def comment_ticket(ticket_id: int) -> Any:
+    user = _get_user_context()
+    if user["role"] != "technician":
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+    comment = request.form.get("comment", "").strip()
+    if not comment:
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+    created_at = _utc_now()
+    with _get_connection() as connection:
+        connection.execute(
+            "INSERT INTO timeline (ticket_id, event, created_at) VALUES (?, ?, ?)",
+            (ticket_id, f"Comentario técnico: {comment}", created_at),
+        )
+    return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+
+
+@app.route("/tickets/<int:ticket_id>/reassign", methods=["POST"])
+def reassign_ticket(ticket_id: int) -> Any:
+    user = _get_user_context()
+    if user["role"] != "technician":
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+    technician_email = request.form.get("technician_email", "")
+    note = request.form.get("note", "").strip()
+    if not technician_email:
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+    assigned_at = _utc_now()
+    if technician_email == "dispatcher":
+        with _get_connection() as connection:
+            connection.execute(
+                "UPDATE tickets SET assigned_to = ?, status = ? WHERE id = ?",
+                ("Sin asignar", "Pendiente", ticket_id),
+            )
+            event = "Devuelto al derivador"
+            if note:
+                event = f"{event}: {note}"
+            connection.execute(
+                "INSERT INTO timeline (ticket_id, event, created_at) VALUES (?, ?, ?)",
+                (ticket_id, event, assigned_at),
+            )
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+    technician = _get_technician_by_email(technician_email)
+    if not technician:
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+    with _get_connection() as connection:
+        connection.execute(
+            "UPDATE tickets SET assigned_to = ?, status = ? WHERE id = ?",
+            (technician_email, "En progreso", ticket_id),
+        )
+        event = f"Reasignado por técnico a {technician['name']} ({technician['email']})"
+        if note:
+            event = f"{event}: {note}"
+        connection.execute(
+            "INSERT INTO timeline (ticket_id, event, created_at) VALUES (?, ?, ?)",
+            (ticket_id, event, assigned_at),
+        )
+    return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+
+
+@app.route("/admin/technicians", methods=["GET", "POST"])
+def admin_technicians() -> Any:
+    user = _get_user_context()
+    if user["role"] != "admin":
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        specialty = request.form.get("specialty", "").strip()
+        if name and email and specialty:
+            with _get_connection() as connection:
+                connection.execute(
+                    """
+                    INSERT OR IGNORE INTO technicians (name, email, specialty, is_active)
+                    VALUES (?, ?, ?, 1)
+                    """,
+                    (name, email, specialty),
+                )
+        return redirect(url_for("admin_technicians"))
+    return render_template(
+        "admin_technicians.html",
+        technicians=_get_technicians(),
+        user=user,
+    )
+
+
+@app.route("/admin/credentials", methods=["GET", "POST"])
+def admin_credentials() -> Any:
+    user = _get_user_context()
+    if user["role"] != "admin":
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        role = request.form.get("role", "").strip()
+        identifier = request.form.get("identifier", "").strip()
+        password = request.form.get("password", "")
+        if role in {"dispatcher", "technician"} and identifier and password:
+            _upsert_user(role, identifier, password)
+        return redirect(url_for("admin_credentials"))
+    with _get_connection() as connection:
+        users = connection.execute(
+            "SELECT * FROM users WHERE role != 'admin' ORDER BY role, identifier"
+        ).fetchall()
+    return render_template(
+        "admin_credentials.html",
+        users=users,
+        technicians=_get_technicians(),
+        user=user,
+    )
+
+
+@app.route("/admin/technicians/<int:tech_id>/update", methods=["POST"])
+def update_technician(tech_id: int) -> Any:
+    user = _get_user_context()
+    if user["role"] != "admin":
+        return redirect(url_for("index"))
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip()
+    specialty = request.form.get("specialty", "").strip()
+    is_active = 1 if request.form.get("is_active") == "on" else 0
+    if name and email and specialty:
+        with _get_connection() as connection:
+            connection.execute(
+                """
+                UPDATE technicians
+                SET name = ?, email = ?, specialty = ?, is_active = ?
+                WHERE id = ?
+                """,
+                (name, email, specialty, is_active, tech_id),
+            )
+    return redirect(url_for("admin_technicians"))
+
+
+@app.route("/admin/technicians/<int:tech_id>/disable", methods=["POST"])
+def disable_technician(tech_id: int) -> Any:
+    user = _get_user_context()
+    if user["role"] != "admin":
+        return redirect(url_for("index"))
+    with _get_connection() as connection:
+        connection.execute(
+            "UPDATE technicians SET is_active = 0 WHERE id = ?", (tech_id,)
+        )
+    return redirect(url_for("admin_technicians"))
+
+
 @app.route("/tickets/<int:ticket_id>/assign", methods=["POST"])
 def assign_ticket(ticket_id: int) -> Any:
     user = _get_user_context()
     if user["role"] != "dispatcher":
         return redirect(url_for("ticket_detail", ticket_id=ticket_id))
     technician_email = request.form.get("technician_email") or "Sin asignar"
-    technician = next(
-        (tech for tech in TECHNICIANS if tech["email"] == technician_email), None
-    )
+    technician = _get_technician_by_email(technician_email)
     assigned_label = (
         f"{technician['name']} ({technician['email']})" if technician else "Sin asignar"
     )
@@ -292,7 +512,63 @@ def _build_ticket_view(ticket: sqlite3.Row) -> dict[str, Any]:
 def _get_user_context() -> dict[str, str]:
     role = session.get("role", "guest")
     technician_email = session.get("technician_email", "")
-    return {"role": role, "technician_email": technician_email}
+    identifier = session.get("user_identifier", "")
+    return {
+        "role": role,
+        "technician_email": technician_email,
+        "identifier": identifier,
+    }
+
+
+def _hash_password(password: str, salt: str) -> str:
+    return hashlib.sha256(f"{salt}{password}".encode("utf-8")).hexdigest()
+
+
+def _authenticate_user(role: str, identifier: str, password: str) -> bool:
+    if not identifier or not password:
+        return False
+    with _get_connection() as connection:
+        record = connection.execute(
+            "SELECT password_hash, salt FROM users WHERE role = ? AND identifier = ?",
+            (role, identifier),
+        ).fetchone()
+    if not record:
+        return False
+    return _hash_password(password, record["salt"]) == record["password_hash"]
+
+
+def _upsert_user(role: str, identifier: str, password: str) -> None:
+    salt = secrets.token_hex(8)
+    password_hash = _hash_password(password, salt)
+    with _get_connection() as connection:
+        existing = connection.execute(
+            "SELECT id FROM users WHERE role = ? AND identifier = ?",
+            (role, identifier),
+        ).fetchone()
+        if existing:
+            connection.execute(
+                """
+                UPDATE users SET password_hash = ?, salt = ? WHERE id = ?
+                """,
+                (password_hash, salt, existing["id"]),
+            )
+        else:
+            connection.execute(
+                """
+                INSERT INTO users (role, identifier, password_hash, salt)
+                VALUES (?, ?, ?, ?)
+                """,
+                (role, identifier, password_hash, salt),
+            )
+
+
+def _get_technician_by_email(email: str) -> sqlite3.Row | None:
+    if not email or email == "Sin asignar":
+        return None
+    with _get_connection() as connection:
+        return connection.execute(
+            "SELECT * FROM technicians WHERE email = ?", (email,)
+        ).fetchone()
 
 
 if __name__ == "__main__":
