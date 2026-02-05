@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Soporte Técnico MiEmpresa</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Soporte Técnico</h1>
+        <p>Canal oficial: atencion@miempresa.com</p>
+      </div>
+      {% if user.role != 'guest' %}
+      <nav>
+        <a href="{{ url_for('index') }}">Tickets</a>
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <span class="nav-role">Perfil: {{ user.role }}</span>
+        <form method="post" action="{{ url_for('logout') }}">
+          <button type="submit" class="link-button">Cerrar sesión</button>
+        </form>
+      </nav>
+      {% endif %}
+    </header>
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

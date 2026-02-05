@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Acceso derivador</h2>
+  <p>Ingresa para asignar manualmente los tickets a cada técnico.</p>
+  <form method="post" action="{{ url_for('login_dispatcher') }}">
+    <button type="submit">Ingresar como derivador</button>
+  </form>
+</section>
+{% endblock %}

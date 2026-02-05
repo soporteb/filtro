@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Acceso administrador</h2>
+  <p>Ingresa al panel con funciones de supervisión y cierre de tickets.</p>
+  <form method="post" action="{{ url_for('login_admin') }}">
+    <button type="submit">Ingresar como administrador</button>
+  </form>
+</section>
+{% endblock %}
