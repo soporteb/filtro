@@ -72,7 +72,8 @@ main {
 
 .login-card {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
   padding: 1rem;
   border-radius: 12px;
@@ -81,6 +82,27 @@ main {
   font-weight: 700;
   color: #1e3a8a;
   background: #eef2ff;
+  gap: 0.35rem;
+  min-height: 90px;
+}
+
+.login-card span {
+  font-weight: 500;
+  color: #4c51bf;
+}
+
+.auth-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.auth-card {
+  max-width: 560px;
+}
+
+.auth-form {
+  margin-top: 0.75rem;
 }
 
 .inline-form {

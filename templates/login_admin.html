@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="card">
+<section class="card auth-card">
   <h2>Acceso administrador</h2>
   <p>Ingresa al panel con funciones de supervisión y cierre de tickets.</p>
-  <form method="post" action="{{ url_for('login_admin') }}" class="grid">
+  <form method="post" action="{{ url_for('login_admin') }}" class="grid auth-form">
     <label>
       Usuario
       <input type="text" name="identifier" required placeholder="admin@miempresa.com" />

@@ -19,6 +19,7 @@ Funciones adicionales:
 - Administrador: gestiona técnicos (crear, editar, deshabilitar) desde la sección "Técnicos".
 - Administrador: crea credenciales para derivadores y técnicos desde la sección "Credenciales".
 - Técnico: agrega comentarios de atención, puede cerrar o devolver/reasignar incidencias.
+- Se registra la última sesión (last login) de cada usuario.
 
 ## Ejecución local
 
