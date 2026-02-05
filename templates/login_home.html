@@ -2,12 +2,23 @@
 
 {% block content %}
 <section class="card">
-  <h2>Inicio de sesión</h2>
-  <p>Selecciona el módulo según tu rol para ingresar al sistema.</p>
+  <div class="auth-header">
+    <h2>Inicio de sesión</h2>
+    <p>Selecciona tu perfil para ingresar al sistema de soporte.</p>
+  </div>
   <div class="login-grid">
-    <a class="login-card" href="{{ url_for('login_admin') }}">Administrador</a>
-    <a class="login-card" href="{{ url_for('login_dispatcher') }}">Derivador</a>
-    <a class="login-card" href="{{ url_for('login_technician') }}">Técnico</a>
+    <a class="login-card" href="{{ url_for('login_admin') }}">
+      <strong>Administrador</strong>
+      <span>Gestión y supervisión</span>
+    </a>
+    <a class="login-card" href="{{ url_for('login_dispatcher') }}">
+      <strong>Derivador</strong>
+      <span>Asignación manual</span>
+    </a>
+    <a class="login-card" href="{{ url_for('login_technician') }}">
+      <strong>Técnico</strong>
+      <span>Atención y seguimiento</span>
+    </a>
   </div>
 </section>
 {% endblock %}

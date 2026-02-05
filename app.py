@@ -42,7 +42,8 @@ def init_db() -> None:
                 role TEXT NOT NULL,
                 identifier TEXT NOT NULL UNIQUE,
                 password_hash TEXT NOT NULL,
-                salt TEXT NOT NULL
+                salt TEXT NOT NULL,
+                last_login TEXT
             );
             CREATE TABLE IF NOT EXISTS technicians (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,6 +95,15 @@ def init_db() -> None:
                 """,
                 ("admin", admin_identifier, password_hash, salt),
             )
+        _ensure_user_columns(connection)
+
+
+def _ensure_user_columns(connection: sqlite3.Connection) -> None:
+    columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(users)").fetchall()
+    }
+    if "last_login" not in columns:
+        connection.execute("ALTER TABLE users ADD COLUMN last_login TEXT")
 
 
 def _get_technicians(active_only: bool = False) -> list[sqlite3.Row]:
@@ -171,6 +181,7 @@ def login_admin() -> Any:
         identifier = request.form.get("identifier", "").strip()
         password = request.form.get("password", "")
         if _authenticate_user("admin", identifier, password):
+            _record_login(identifier)
             session["role"] = "admin"
             session["technician_email"] = ""
             session["user_identifier"] = identifier
@@ -189,6 +200,7 @@ def login_dispatcher() -> Any:
         identifier = request.form.get("identifier", "").strip()
         password = request.form.get("password", "")
         if _authenticate_user("dispatcher", identifier, password):
+            _record_login(identifier)
             session["role"] = "dispatcher"
             session["technician_email"] = ""
             session["user_identifier"] = identifier
@@ -207,6 +219,7 @@ def login_technician() -> Any:
         technician_email = request.form.get("technician_email", "")
         password = request.form.get("password", "")
         if _authenticate_user("technician", technician_email, password):
+            _record_login(technician_email)
             session["role"] = "technician"
             session["technician_email"] = technician_email
             session["user_identifier"] = technician_email
@@ -335,7 +348,10 @@ def reassign_ticket(ticket_id: int) -> Any:
             "UPDATE tickets SET assigned_to = ?, status = ? WHERE id = ?",
             (technician_email, "En progreso", ticket_id),
         )
-        event = f"Reasignado por técnico a {technician['name']} ({technician['email']})"
+        actor = user.get("identifier") or "Técnico"
+        event = (
+            f"Reasignado por {actor} a {technician['name']} ({technician['email']})"
+        )
         if note:
             event = f"{event}: {note}"
         connection.execute(
@@ -377,10 +393,15 @@ def admin_credentials() -> Any:
     if user["role"] != "admin":
         return redirect(url_for("index"))
     if request.method == "POST":
+        action = request.form.get("action", "upsert")
         role = request.form.get("role", "").strip()
         identifier = request.form.get("identifier", "").strip()
         password = request.form.get("password", "")
-        if role in {"dispatcher", "technician"} and identifier and password:
+        if action == "update_admin":
+            admin_identifier = user.get("identifier")
+            if admin_identifier and password:
+                _upsert_user("admin", admin_identifier, password)
+        elif role in {"dispatcher", "technician"} and identifier and password:
             _upsert_user(role, identifier, password)
         return redirect(url_for("admin_credentials"))
     with _get_connection() as connection:
@@ -436,6 +457,7 @@ def assign_ticket(ticket_id: int) -> Any:
         return redirect(url_for("ticket_detail", ticket_id=ticket_id))
     technician_email = request.form.get("technician_email") or "Sin asignar"
     technician = _get_technician_by_email(technician_email)
+    dispatcher = user.get("identifier") or "Derivador"
     assigned_label = (
         f"{technician['name']} ({technician['email']})" if technician else "Sin asignar"
     )
@@ -447,7 +469,7 @@ def assign_ticket(ticket_id: int) -> Any:
         )
         connection.execute(
             "INSERT INTO timeline (ticket_id, event, created_at) VALUES (?, ?, ?)",
-            (ticket_id, f"Asignado manualmente a {assigned_label}", assigned_at),
+            (ticket_id, f"Derivado por {dispatcher} a {assigned_label}", assigned_at),
         )
     return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
@@ -560,6 +582,14 @@ def _upsert_user(role: str, identifier: str, password: str) -> None:
                 """,
                 (role, identifier, password_hash, salt),
             )
+
+
+def _record_login(identifier: str) -> None:
+    with _get_connection() as connection:
+        connection.execute(
+            "UPDATE users SET last_login = ? WHERE identifier = ?",
+            (_utc_now(), identifier),
+        )
 
 
 def _get_technician_by_email(email: str) -> sqlite3.Row | None:

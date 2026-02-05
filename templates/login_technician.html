@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="card">
+<section class="card auth-card">
   <h2>Acceso técnico</h2>
   <p>Selecciona tu correo para ver los tickets asignados.</p>
-  <form method="post" action="{{ url_for('login_technician') }}" class="grid">
+  <form method="post" action="{{ url_for('login_technician') }}" class="grid auth-form">
     <label>
       Técnico
       <select name="technician_email" required>

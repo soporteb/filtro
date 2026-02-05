@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="card">
+<section class="card auth-card">
   <h2>Acceso derivador</h2>
   <p>Ingresa para asignar manualmente los tickets a cada técnico.</p>
-  <form method="post" action="{{ url_for('login_dispatcher') }}" class="grid">
+  <form method="post" action="{{ url_for('login_dispatcher') }}" class="grid auth-form">
     <label>
       Usuario
       <input type="text" name="identifier" required placeholder="derivador@miempresa.com" />
