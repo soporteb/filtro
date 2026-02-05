@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card metrics">
+  <div>
+    <h2>Total de tickets</h2>
+    <p>{{ metrics.total }}</p>
+  </div>
+  <div>
+    <h2>Abiertos</h2>
+    <p>{{ metrics.open }}</p>
+  </div>
+  <div>
+    <h2>Cerrados</h2>
+    <p>{{ metrics.closed }}</p>
+  </div>
+  <div>
+    <h2>Tiempo promedio (hrs)</h2>
+    <p>{{ metrics.avg_hours }}</p>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Tiempo de atención por incidencia</h2>
+  <div class="table">
+    <div class="table-row header">
+      <span>ID</span>
+      <span>Asunto</span>
+      <span>Técnico</span>
+      <span>Estado</span>
+      <span>Creado</span>
+      <span>Cerrado</span>
+      <span>Horas totales</span>
+    </div>
+    {% for ticket in tickets %}
+    <div class="table-row">
+      <span>#{{ ticket['id'] }}</span>
+      <span>{{ ticket['subject'] }}</span>
+      <span>{{ ticket['assigned_to'] }}</span>
+      <span class="status {{ ticket['status']|lower }}">{{ ticket['status'] }}</span>
+      <span>{{ ticket['created_at'] }}</span>
+      <span>{{ ticket['closed_at'] or 'En progreso' }}</span>
+      <span>
+        {{ ticket['hours'] if ticket['hours'] is not none else '-' }}
+      </span>
+    </div>
+    {% else %}
+    <p>No hay datos para mostrar.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Ticket #{{ ticket['id'] }}</h2>
+  <div class="detail-grid">
+    <div>
+      <h3>Solicitante</h3>
+      <p>{{ ticket['email_from'] }}</p>
+    </div>
+    <div>
+      <h3>Técnico asignado</h3>
+      <p>{{ ticket['assigned_to'] }}</p>
+    </div>
+    <div>
+      <h3>Estado</h3>
+      <p class="status {{ ticket['status']|lower }}">{{ ticket['status'] }}</p>
+    </div>
+    <div>
+      <h3>Creado</h3>
+      <p>{{ ticket['created_at'] }}</p>
+    </div>
+    <div>
+      <h3>Cerrado</h3>
+      <p>{{ ticket['closed_at'] or 'En progreso' }}</p>
+    </div>
+  </div>
+  <h3>Asunto</h3>
+  <p>{{ ticket['subject'] }}</p>
+  <h3>Detalle</h3>
+  <p>{{ ticket['body'] }}</p>
+
+  {% if ticket['status'] != 'Cerrado' %}
+  <form method="post" action="{{ url_for('close_ticket', ticket_id=ticket['id']) }}">
+    <button type="submit">Cerrar ticket</button>
+  </form>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Seguimiento</h2>
+  <ul class="timeline">
+    {% for event in timeline %}
+    <li>
+      <span>{{ event['created_at'] }}</span>
+      <strong>{{ event['event'] }}</strong>
+    </li>
+    {% else %}
+    <li>No hay eventos registrados.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}
