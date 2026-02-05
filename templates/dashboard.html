@@ -21,7 +21,10 @@
 </section>
 
 <section class="card">
-  <h2>Tiempo de atención por incidencia</h2>
+  <div class="section-header">
+    <h2>Tiempo de atención por incidencia</h2>
+    <a class="link" href="{{ url_for('export_closed') }}">Descargar atenciones cerradas (Excel)</a>
+  </div>
   <div class="table">
     <div class="table-row header">
       <span>ID</span>

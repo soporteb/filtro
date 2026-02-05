@@ -20,6 +20,8 @@ Funciones adicionales:
 - Administrador: crea credenciales para derivadores y técnicos desde la sección "Credenciales".
 - Técnico: agrega comentarios de atención, puede cerrar o devolver/reasignar incidencias.
 - Se registra la última sesión (last login) de cada usuario.
+- Las fechas se almacenan en horario de Lima (Perú).
+- Exportación en CSV compatible con Excel para tickets cerrados.
 
 ## Ejecución local
 

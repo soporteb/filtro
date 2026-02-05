@@ -1,7 +1,7 @@
 :root {
   color-scheme: light;
   font-family: "Inter", system-ui, sans-serif;
-  background: #f5f7fb;
+  background: #f1f5fb;
   color: #1f2933;
 }
 
@@ -11,7 +11,7 @@ body {
 }
 
 header {
-  background: #0f172a;
+  background: #0b5fa5;
   color: #fff;
   padding: 1.5rem 2.5rem;
   display: flex;
@@ -56,6 +56,20 @@ main {
   gap: 1.5rem;
 }
 
+header .brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+header .brand img {
+  width: 80px;
+  height: auto;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.35rem;
+}
+
 .card {
   background: #fff;
   padding: 1.5rem;
@@ -80,15 +94,15 @@ main {
   border: 1px solid #dbe3f0;
   text-decoration: none;
   font-weight: 700;
-  color: #1e3a8a;
-  background: #eef2ff;
+  color: #0b5fa5;
+  background: #e6f2fb;
   gap: 0.35rem;
   min-height: 90px;
 }
 
 .login-card span {
   font-weight: 500;
-  color: #4c51bf;
+  color: #1c79c4;
 }
 
 .auth-header {
@@ -176,7 +190,7 @@ button {
   border: none;
   border-radius: 8px;
   padding: 0.8rem 1.2rem;
-  background: #2563eb;
+  background: #0b5fa5;
   color: #fff;
   font-weight: 700;
   cursor: pointer;

@@ -4,6 +4,9 @@ import os
 import secrets
 import sqlite3
 import hashlib
+import csv
+import io
+from zoneinfo import ZoneInfo
 from datetime import datetime, timezone
 from typing import Any
 
@@ -29,8 +32,11 @@ def _get_connection() -> sqlite3.Connection:
     return connection
 
 
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+LIMA_TZ = ZoneInfo("America/Lima")
+
+
+def _now_lima() -> str:
+    return datetime.now(LIMA_TZ).isoformat()
 
 
 def init_db() -> None:
@@ -117,7 +123,7 @@ def _get_technicians(active_only: bool = False) -> list[sqlite3.Row]:
 
 
 def _create_ticket(email_from: str, subject: str, body: str) -> int:
-    created_at = _utc_now()
+    created_at = _now_lima()
     with _get_connection() as connection:
         cursor = connection.execute(
             """
@@ -286,7 +292,7 @@ def close_ticket(ticket_id: int) -> Any:
     user = _get_user_context()
     if user["role"] not in {"admin", "technician"}:
         return redirect(url_for("ticket_detail", ticket_id=ticket_id))
-    closed_at = _utc_now()
+    closed_at = _now_lima()
     with _get_connection() as connection:
         connection.execute(
             "UPDATE tickets SET status = ?, closed_at = ? WHERE id = ?",
@@ -307,7 +313,7 @@ def comment_ticket(ticket_id: int) -> Any:
     comment = request.form.get("comment", "").strip()
     if not comment:
         return redirect(url_for("ticket_detail", ticket_id=ticket_id))
-    created_at = _utc_now()
+    created_at = _now_lima()
     with _get_connection() as connection:
         connection.execute(
             "INSERT INTO timeline (ticket_id, event, created_at) VALUES (?, ?, ?)",
@@ -325,7 +331,7 @@ def reassign_ticket(ticket_id: int) -> Any:
     note = request.form.get("note", "").strip()
     if not technician_email:
         return redirect(url_for("ticket_detail", ticket_id=ticket_id))
-    assigned_at = _utc_now()
+    assigned_at = _now_lima()
     if technician_email == "dispatcher":
         with _get_connection() as connection:
             connection.execute(
@@ -461,7 +467,7 @@ def assign_ticket(ticket_id: int) -> Any:
     assigned_label = (
         f"{technician['name']} ({technician['email']})" if technician else "Sin asignar"
     )
-    assigned_at = _utc_now()
+    assigned_at = _now_lima()
     with _get_connection() as connection:
         connection.execute(
             "UPDATE tickets SET assigned_to = ?, status = ? WHERE id = ?",
@@ -472,6 +478,54 @@ def assign_ticket(ticket_id: int) -> Any:
             (ticket_id, f"Derivado por {dispatcher} a {assigned_label}", assigned_at),
         )
     return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+
+
+@app.route("/exports/closed")
+def export_closed() -> Any:
+    user = _get_user_context()
+    query = "SELECT * FROM tickets WHERE status = 'Cerrado'"
+    params: tuple[Any, ...] = ()
+    if user["role"] == "technician" and user["technician_email"]:
+        query += " AND assigned_to = ?"
+        params = (user["technician_email"],)
+    query += " ORDER BY closed_at DESC"
+    with _get_connection() as connection:
+        rows = connection.execute(query, params).fetchall()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "ID",
+            "Solicitante",
+            "Asunto",
+            "Técnico",
+            "Estado",
+            "Creado",
+            "Cerrado",
+        ]
+    )
+    for row in rows:
+        writer.writerow(
+            [
+                row["id"],
+                row["email_from"],
+                row["subject"],
+                row["assigned_to"],
+                row["status"],
+                row["created_at"],
+                row["closed_at"],
+            ]
+        )
+    output.seek(0)
+    filename = "tickets_cerrados.csv"
+    return (
+        output.getvalue(),
+        200,
+        {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": f"attachment; filename={filename}",
+        },
+    )
 
 
 @app.route("/intake/email", methods=["POST"])
@@ -588,7 +642,7 @@ def _record_login(identifier: str) -> None:
     with _get_connection() as connection:
         connection.execute(
             "UPDATE users SET last_login = ? WHERE identifier = ?",
-            (_utc_now(), identifier),
+            (_now_lima(), identifier),
         )
 
 
@@ -603,4 +657,4 @@ def _get_technician_by_email(email: str) -> sqlite3.Row | None:
 
 if __name__ == "__main__":
     init_db()
-    app.run(host="172.16.200.154", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
