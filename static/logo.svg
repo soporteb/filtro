@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" role="img" aria-label="ENEI">
+  <rect width="320" height="120" fill="#0b5fa5" rx="12" />
+  <g fill="#ffffff" font-family="Arial, sans-serif" font-weight="700">
+    <text x="24" y="76" font-size="48">ENEI</text>
+  </g>
+  <g fill="#ffffff" font-family="Arial, sans-serif" font-size="12">
+    <text x="150" y="50">ESCUELA NACIONAL DE</text>
+    <text x="150" y="68">ESTADÍSTICA E</text>
+    <text x="150" y="86">INFORMÁTICA</text>
+  </g>
+  <path d="M140 30 L170 30 L182 70 L150 70 Z" fill="#f7b500" opacity="0.9" />
+  <path d="M170 30 L200 30 L212 70 L182 70 Z" fill="#7cc7ff" opacity="0.8" />
+</svg>

@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Gestión de técnicos</h2>
+  <p>Agrega, edita o deshabilita técnicos del sistema.</p>
+  <form method="post" action="{{ url_for('admin_technicians') }}" class="grid">
+    <label>
+      Nombre
+      <input type="text" name="name" required />
+    </label>
+    <label>
+      Email
+      <input type="email" name="email" required />
+    </label>
+    <label class="full">
+      Especialidad
+      <input type="text" name="specialty" required />
+    </label>
+    <button type="submit">Agregar técnico</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Técnicos registrados</h2>
+  <div class="table">
+    <div class="table-row header">
+      <span>Nombre</span>
+      <span>Email</span>
+      <span>Especialidad</span>
+      <span>Activo</span>
+      <span>Acciones</span>
+    </div>
+    {% for tech in technicians %}
+    <div class="table-row">
+      <form method="post" action="{{ url_for('update_technician', tech_id=tech['id']) }}" class="inline-form">
+        <input type="text" name="name" value="{{ tech['name'] }}" required />
+        <input type="email" name="email" value="{{ tech['email'] }}" required />
+        <input type="text" name="specialty" value="{{ tech['specialty'] }}" required />
+        <label class="checkbox">
+          <input type="checkbox" name="is_active" {% if tech['is_active'] %}checked{% endif %} />
+          Activo
+        </label>
+        <div class="actions">
+          <button type="submit">Guardar</button>
+          <button type="submit" formaction="{{ url_for('disable_technician', tech_id=tech['id']) }}" class="secondary">Deshabilitar</button>
+        </div>
+      </form>
+    </div>
+    {% else %}
+    <p>No hay técnicos registrados.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <div class="section-header">
+    <h2>Ingreso manual de ticket</h2>
+    <div class="user-pill">
+      <span>Perfil actual: {{ user.role }}</span>
+      {% if user.technician_email %}
+      <span>{{ user.technician_email }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <form method="post" action="{{ url_for('create_ticket') }}" class="grid">
+    <label>
+      Correo del solicitante
+      <input type="email" name="email_from" required placeholder="cliente@dominio.com" />
+    </label>
+    <label>
+      Asunto
+      <input type="text" name="subject" required placeholder="Falla en VPN" />
+    </label>
+    <label class="full">
+      Detalle
+      <textarea name="body" rows="4" required placeholder="Describe la incidencia..."></textarea>
+    </label>
+    <button type="submit">Crear ticket</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Tickets recientes</h2>
+  <div class="table">
+    <div class="table-row header">
+      <span>ID</span>
+      <span>Asunto</span>
+      <span>Solicitante</span>
+      <span>Técnico asignado</span>
+      <span>Estado</span>
+      <span>Creado</span>
+      <span>Acción</span>
+      {% if user.role == 'dispatcher' %}
+      <span>Derivar</span>
+      {% endif %}
+    </div>
+    {% for ticket in tickets %}
+    <div class="table-row">
+      <span>#{{ ticket['id'] }}</span>
+      <span>{{ ticket['subject'] }}</span>
+      <span>{{ ticket['email_from'] }}</span>
+      <span>{{ ticket['assigned_to'] }}</span>
+      <span class="status {{ ticket['status']|lower|replace(' ', '-') }}">{{ ticket['status'] }}</span>
+      <span>{{ ticket['created_at'] }}</span>
+      <span>
+        <a class="link" href="{{ url_for('ticket_detail', ticket_id=ticket['id']) }}">Ver detalle</a>
+      </span>
+      {% if user.role == 'dispatcher' %}
+      <span>
+        <form method="post" action="{{ url_for('assign_ticket', ticket_id=ticket['id']) }}">
+          <select name="technician_email" required>
+            <option value="" disabled selected>Seleccionar</option>
+            {% for tech in technicians %}
+            <option value="{{ tech['email'] }}">{{ tech['name'] }} - {{ tech['specialty'] }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit">Asignar</button>
+        </form>
+      </span>
+      {% endif %}
+    </div>
+    {% else %}
+    <p>No hay tickets registrados.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>Derivación manual</h2>
+  <p>El encargado de derivar asigna el ticket al técnico correspondiente.</p>
+  <ul>
+    {% for tech in technicians %}
+    <li><strong>{{ tech['name'] }}</strong> — {{ tech['specialty'] }} ({{ tech['email'] }})</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}
