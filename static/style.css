@@ -69,6 +69,13 @@ textarea {
   font-size: 1rem;
 }
 
+select {
+  border-radius: 8px;
+  border: 1px solid #d3dbe8;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.95rem;
+}
+
 button {
   border: none;
   border-radius: 8px;
@@ -80,6 +87,25 @@ button {
   width: fit-content;
 }
 
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.user-pill {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
 .table {
   display: flex;
   flex-direction: column;
@@ -88,7 +114,7 @@ button {
 
 .table-row {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 0.5rem;
   align-items: center;
   padding: 0.5rem 0;
@@ -116,6 +142,16 @@ button {
 .status.abierto {
   background: #e0f2fe;
   color: #0369a1;
+}
+
+.status.pendiente {
+  background: #fef9c3;
+  color: #a16207;
+}
+
+.status.en-progreso {
+  background: #e0f2fe;
+  color: #0284c7;
 }
 
 .status.cerrado {

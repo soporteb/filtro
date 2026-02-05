@@ -5,9 +5,10 @@ Este proyecto implementa un flujo básico de soporte técnico para recibir incid
 ## Funcionalidades
 
 - Ingreso manual de tickets (simula los correos recibidos en `atencion@miempresa.com`).
-- Derivación automática al técnico encargado según el contenido.
+- Derivación manual por el encargado de asignaciones.
 - Seguimiento con eventos de línea de tiempo.
 - Dashboard con tiempos promedio y estado de cada incidencia.
+- Módulos por perfil: administrador, derivador y técnico.
 
 ## Ejecución local
 
@@ -21,6 +22,7 @@ python app.py
 Accede a:
 - `http://localhost:5000/` para crear y ver tickets.
 - `http://localhost:5000/dashboard` para el reporte.
+- `http://localhost:5000/login` para seleccionar el perfil de trabajo.
 
 ## Ingreso de correos (API)
 

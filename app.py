@@ -5,12 +5,13 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any
 
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "support.db")
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = "dev-secret-key"
 
 
 TECHNICIANS = [
@@ -55,17 +56,7 @@ def init_db() -> None:
         )
 
 
-def _assign_technician(subject: str, body: str) -> dict[str, str]:
-    content = f"{subject} {body}".lower()
-    if "red" in content or "network" in content:
-        return TECHNICIANS[0]
-    if "hardware" in content or "impresora" in content:
-        return TECHNICIANS[2]
-    return TECHNICIANS[1]
-
-
 def _create_ticket(email_from: str, subject: str, body: str) -> int:
-    technician = _assign_technician(subject, body)
     created_at = _utc_now()
     with _get_connection() as connection:
         cursor = connection.execute(
@@ -73,23 +64,49 @@ def _create_ticket(email_from: str, subject: str, body: str) -> int:
             INSERT INTO tickets (email_from, subject, body, assigned_to, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (email_from, subject, body, technician["email"], "Abierto", created_at),
+            (email_from, subject, body, "Sin asignar", "Pendiente", created_at),
         )
         ticket_id = cursor.lastrowid
         connection.execute(
             "INSERT INTO timeline (ticket_id, event, created_at) VALUES (?, ?, ?)",
-            (ticket_id, f"Asignado a {technician['name']} ({technician['email']})", created_at),
+            (ticket_id, "Ticket creado", created_at),
         )
     return int(ticket_id)
 
 
 @app.route("/")
 def index() -> str:
+    user = _get_user_context()
     with _get_connection() as connection:
-        tickets = connection.execute(
-            "SELECT * FROM tickets ORDER BY created_at DESC"
-        ).fetchall()
-    return render_template("index.html", tickets=tickets, technicians=TECHNICIANS)
+        if user["role"] == "technician" and user["technician_email"]:
+            tickets = connection.execute(
+                "SELECT * FROM tickets WHERE assigned_to = ? ORDER BY created_at DESC",
+                (user["technician_email"],),
+            ).fetchall()
+        else:
+            tickets = connection.execute(
+                "SELECT * FROM tickets ORDER BY created_at DESC"
+            ).fetchall()
+    return render_template(
+        "index.html", tickets=tickets, technicians=TECHNICIANS, user=user
+    )
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login() -> Any:
+    if request.method == "POST":
+        role = request.form.get("role") or "admin"
+        technician_email = request.form.get("technician_email", "")
+        session["role"] = role
+        session["technician_email"] = technician_email
+        return redirect(url_for("index"))
+    return render_template("login.html", technicians=TECHNICIANS, user=_get_user_context())
+
+
+@app.route("/logout", methods=["POST"])
+def logout() -> Any:
+    session.clear()
+    return redirect(url_for("index"))
 
 
 @app.route("/tickets", methods=["POST"])
@@ -113,11 +130,20 @@ def ticket_detail(ticket_id: int) -> str:
         ).fetchall()
     if not ticket:
         return render_template("ticket_not_found.html", ticket_id=ticket_id), 404
-    return render_template("ticket_detail.html", ticket=ticket, timeline=timeline)
+    return render_template(
+        "ticket_detail.html",
+        ticket=ticket,
+        timeline=timeline,
+        technicians=TECHNICIANS,
+        user=_get_user_context(),
+    )
 
 
 @app.route("/tickets/<int:ticket_id>/close", methods=["POST"])
 def close_ticket(ticket_id: int) -> Any:
+    user = _get_user_context()
+    if user["role"] not in {"admin", "technician"}:
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
     closed_at = _utc_now()
     with _get_connection() as connection:
         connection.execute(
@@ -127,6 +153,31 @@ def close_ticket(ticket_id: int) -> Any:
         connection.execute(
             "INSERT INTO timeline (ticket_id, event, created_at) VALUES (?, ?, ?)",
             (ticket_id, "Ticket cerrado", closed_at),
+        )
+    return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+
+
+@app.route("/tickets/<int:ticket_id>/assign", methods=["POST"])
+def assign_ticket(ticket_id: int) -> Any:
+    user = _get_user_context()
+    if user["role"] != "dispatcher":
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+    technician_email = request.form.get("technician_email") or "Sin asignar"
+    technician = next(
+        (tech for tech in TECHNICIANS if tech["email"] == technician_email), None
+    )
+    assigned_label = (
+        f"{technician['name']} ({technician['email']})" if technician else "Sin asignar"
+    )
+    assigned_at = _utc_now()
+    with _get_connection() as connection:
+        connection.execute(
+            "UPDATE tickets SET assigned_to = ?, status = ? WHERE id = ?",
+            (technician_email, "En progreso", ticket_id),
+        )
+        connection.execute(
+            "INSERT INTO timeline (ticket_id, event, created_at) VALUES (?, ?, ?)",
+            (ticket_id, f"Asignado manualmente a {assigned_label}", assigned_at),
         )
     return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
@@ -149,7 +200,12 @@ def dashboard() -> str:
         ).fetchall()
     metrics = _calculate_metrics(tickets)
     ticket_views = [_build_ticket_view(ticket) for ticket in tickets]
-    return render_template("dashboard.html", tickets=ticket_views, metrics=metrics)
+    return render_template(
+        "dashboard.html",
+        tickets=ticket_views,
+        metrics=metrics,
+        user=_get_user_context(),
+    )
 
 
 def _calculate_metrics(tickets: list[sqlite3.Row]) -> dict[str, Any]:
@@ -178,6 +234,12 @@ def _build_ticket_view(ticket: sqlite3.Row) -> dict[str, Any]:
         closed_at = datetime.fromisoformat(ticket["closed_at"])
         hours = round((closed_at - created_at).total_seconds() / 3600, 2)
     return {**dict(ticket), "hours": hours}
+
+
+def _get_user_context() -> dict[str, str]:
+    role = session.get("role", "guest")
+    technician_email = session.get("technician_email", "")
+    return {"role": role, "technician_email": technician_email}
 
 
 if __name__ == "__main__":

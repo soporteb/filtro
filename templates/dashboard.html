@@ -37,7 +37,7 @@
       <span>#{{ ticket['id'] }}</span>
       <span>{{ ticket['subject'] }}</span>
       <span>{{ ticket['assigned_to'] }}</span>
-      <span class="status {{ ticket['status']|lower }}">{{ ticket['status'] }}</span>
+      <span class="status {{ ticket['status']|lower|replace(' ', '-') }}">{{ ticket['status'] }}</span>
       <span>{{ ticket['created_at'] }}</span>
       <span>{{ ticket['closed_at'] or 'En progreso' }}</span>
       <span>

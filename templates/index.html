@@ -2,7 +2,15 @@
 
 {% block content %}
 <section class="card">
-  <h2>Ingreso manual de ticket</h2>
+  <div class="section-header">
+    <h2>Ingreso manual de ticket</h2>
+    <div class="user-pill">
+      <span>Perfil actual: {{ user.role }}</span>
+      {% if user.technician_email %}
+      <span>{{ user.technician_email }}</span>
+      {% endif %}
+    </div>
+  </div>
   <form method="post" action="{{ url_for('create_ticket') }}" class="grid">
     <label>
       Correo del solicitante
@@ -31,6 +39,9 @@
       <span>Estado</span>
       <span>Creado</span>
       <span>Acción</span>
+      {% if user.role == 'dispatcher' %}
+      <span>Derivar</span>
+      {% endif %}
     </div>
     {% for ticket in tickets %}
     <div class="table-row">
@@ -38,11 +49,24 @@
       <span>{{ ticket['subject'] }}</span>
       <span>{{ ticket['email_from'] }}</span>
       <span>{{ ticket['assigned_to'] }}</span>
-      <span class="status {{ ticket['status']|lower }}">{{ ticket['status'] }}</span>
+      <span class="status {{ ticket['status']|lower|replace(' ', '-') }}">{{ ticket['status'] }}</span>
       <span>{{ ticket['created_at'] }}</span>
       <span>
         <a class="link" href="{{ url_for('ticket_detail', ticket_id=ticket['id']) }}">Ver detalle</a>
       </span>
+      {% if user.role == 'dispatcher' %}
+      <span>
+        <form method="post" action="{{ url_for('assign_ticket', ticket_id=ticket['id']) }}">
+          <select name="technician_email" required>
+            <option value="" disabled selected>Seleccionar</option>
+            {% for tech in technicians %}
+            <option value="{{ tech.email }}">{{ tech.name }} - {{ tech.specialty }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit">Asignar</button>
+        </form>
+      </span>
+      {% endif %}
     </div>
     {% else %}
     <p>No hay tickets registrados.</p>
@@ -51,8 +75,8 @@
 </section>
 
 <section class="card">
-  <h2>Derivación automática</h2>
-  <p>Las incidencias se derivan al técnico encargado según el contenido del correo.</p>
+  <h2>Derivación manual</h2>
+  <p>El encargado de derivar asigna el ticket al técnico correspondiente.</p>
   <ul>
     {% for tech in technicians %}
     <li><strong>{{ tech.name }}</strong> — {{ tech.specialty }} ({{ tech.email }})</li>
