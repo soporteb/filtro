@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Acceso por perfil</h2>
+  <p>Selecciona el rol para operar el sistema de soporte.</p>
+  <form method="post" action="{{ url_for('login') }}" class="grid">
+    <label>
+      Rol
+      <select name="role" required>
+        <option value="admin">Administrador</option>
+        <option value="dispatcher">Derivador</option>
+        <option value="technician">Técnico</option>
+      </select>
+    </label>
+    <label>
+      Técnico (solo si aplica)
+      <select name="technician_email">
+        <option value="">Seleccionar</option>
+        {% for tech in technicians %}
+        <option value="{{ tech.email }}">{{ tech.name }} - {{ tech.specialty }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Ingresar</button>
+  </form>
+  {% if user.role != 'guest' %}
+  <form method="post" action="{{ url_for('logout') }}">
+    <button type="submit">Cerrar sesión</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}
